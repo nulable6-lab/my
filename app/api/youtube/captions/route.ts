@@ -2,6 +2,19 @@ import { type NextRequest, NextResponse } from "next/server"
 
 export const runtime = "edge"
 
+interface YouTubeCaptionItem {
+  id: string
+  snippet: {
+    language: string
+    name: string
+    trackKind: string
+  }
+}
+
+interface YouTubeCaptionsResponse {
+  items?: YouTubeCaptionItem[]
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const videoId = searchParams.get("id")
@@ -24,10 +37,10 @@ export async function GET(request: NextRequest) {
       throw new Error("Failed to fetch captions from YouTube API")
     }
 
-    const data = await response.json()
+    const data: YouTubeCaptionsResponse = await response.json()
 
     const captions =
-      data.items?.map((item: any) => ({
+      data.items?.map((item) => ({
         id: item.id,
         language: item.snippet.language,
         name: item.snippet.name,
