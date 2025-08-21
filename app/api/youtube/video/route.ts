@@ -37,18 +37,33 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    console.log("[v0] Fetching video info for ID:", videoId)
+
     const response = await fetch(
       `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=snippet&key=${apiKey}`,
     )
 
+    console.log("[v0] YouTube API response status:", response.status)
+
     if (!response.ok) {
-      throw new Error("Failed to fetch from YouTube API")
+      const errorText = await response.text()
+      console.error("[v0] YouTube API error response:", errorText)
+
+      if (response.status === 403) {
+        return NextResponse.json({ error: "YouTube API quota exceeded or invalid API key" }, { status: 403 })
+      }
+      if (response.status === 400) {
+        return NextResponse.json({ error: "Invalid video ID format" }, { status: 400 })
+      }
+
+      throw new Error(`YouTube API returned ${response.status}: ${errorText}`)
     }
 
     const data: YouTubeVideoResponse = await response.json()
+    console.log("[v0] YouTube API response data:", JSON.stringify(data, null, 2))
 
     if (!data.items || data.items.length === 0) {
-      return NextResponse.json({ error: "Video not found" }, { status: 404 })
+      return NextResponse.json({ error: "Video not found or is not accessible" }, { status: 404 })
     }
 
     const video = data.items[0]
@@ -59,9 +74,16 @@ export async function GET(request: NextRequest) {
       thumbnails: video.snippet.thumbnails,
     }
 
+    console.log("[v0] Successfully fetched video info:", videoInfo.title)
     return NextResponse.json(videoInfo)
   } catch (error) {
-    console.error("YouTube API error:", error)
-    return NextResponse.json({ error: "Failed to fetch video information" }, { status: 500 })
+    console.error("[v0] YouTube API error:", error)
+    return NextResponse.json(
+      {
+        error: "Failed to fetch video information",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
