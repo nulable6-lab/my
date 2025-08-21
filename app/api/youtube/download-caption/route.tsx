@@ -3,9 +3,15 @@ import { formatSrtTimestamp } from "@/lib/youtube-api"
 
 export const runtime = "edge"
 
+interface DownloadCaptionRequest {
+  videoId: string
+  captionId: string
+  format?: "srt" | "vtt" | "txt"
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { videoId, captionId, format = "srt" } = await request.json()
+    const { videoId, captionId, format = "srt" }: DownloadCaptionRequest = await request.json()
 
     if (!videoId || !captionId) {
       return NextResponse.json({ error: "Video ID and Caption ID are required" }, { status: 400 })
