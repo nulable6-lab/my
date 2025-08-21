@@ -28,13 +28,22 @@ export interface CaptionTrack {
 export function extractVideoId(url: string): string | null {
   const patterns = [
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
+    /youtu\.be\/([^&\n?#?]+)/,
     /^([a-zA-Z0-9_-]{11})$/, // Direct video ID
   ]
 
+  // Clean the URL by removing tracking parameters
+  const cleanUrl = url.replace(/[?&]si=[^&]*/, "").replace(/[?&]t=[^&]*/, "")
+
   for (const pattern of patterns) {
-    const match = url.match(pattern)
-    if (match) {
-      return match[1]
+    const match = cleanUrl.match(pattern)
+    if (match && match[1]) {
+      // Extract only the video ID part (first 11 characters for YouTube IDs)
+      const videoId = match[1].substring(0, 11)
+      if (/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+        return videoId
+      }
     }
   }
 
@@ -53,13 +62,20 @@ export function isValidYouTubeUrl(url: string): boolean {
  */
 export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideo | null> {
   try {
+    console.log("[v0] Fetching video info for:", videoId)
     const response = await fetch(`/api/youtube/video?id=${videoId}`)
+
     if (!response.ok) {
-      throw new Error("Failed to fetch video info")
+      const errorData = await response.json()
+      console.error("[v0] API error:", errorData)
+      throw new Error(errorData.error || "Failed to fetch video info")
     }
-    return await response.json()
+
+    const data = await response.json()
+    console.log("[v0] Successfully fetched video:", data.title)
+    return data
   } catch (error) {
-    console.error("Error fetching video info:", error)
+    console.error("[v0] Error fetching video info:", error)
     return null
   }
 }
