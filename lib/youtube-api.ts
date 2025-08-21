@@ -66,7 +66,7 @@ export async function fetchVideoInfo(videoId: string): Promise<YouTubeVideo | nu
     const response = await fetch(`/api/youtube/video?id=${videoId}`)
 
     if (!response.ok) {
-      const errorData = await response.json()
+      const errorData = (await response.json()) as { error?: string }
       console.error("[v0] API error:", errorData)
       throw new Error(errorData.error || "Failed to fetch video info")
     }
