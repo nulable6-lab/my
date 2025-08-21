@@ -2,6 +2,27 @@ import { type NextRequest, NextResponse } from "next/server"
 
 export const runtime = "edge"
 
+interface YouTubeVideoSnippet {
+  title: string
+  description: string
+  thumbnails: {
+    default?: { url: string; width: number; height: number }
+    medium?: { url: string; width: number; height: number }
+    high?: { url: string; width: number; height: number }
+    standard?: { url: string; width: number; height: number }
+    maxres?: { url: string; width: number; height: number }
+  }
+}
+
+interface YouTubeVideoItem {
+  id: string
+  snippet: YouTubeVideoSnippet
+}
+
+interface YouTubeVideoResponse {
+  items: YouTubeVideoItem[]
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const videoId = searchParams.get("id")
@@ -24,7 +45,7 @@ export async function GET(request: NextRequest) {
       throw new Error("Failed to fetch from YouTube API")
     }
 
-    const data = await response.json()
+    const data: YouTubeVideoResponse = await response.json()
 
     if (!data.items || data.items.length === 0) {
       return NextResponse.json({ error: "Video not found" }, { status: 404 })
