@@ -101,29 +101,51 @@ export async function fetchVideoInfoAction(
   videoId: string,
 ): Promise<{ success: true; data: YouTubeVideo } | { success: false; error: string }> {
   try {
+    console.log("[v0] Fetching video info for ID:", videoId)
+
     const apiKey = process.env.YOUTUBE_API_KEY
     if (!apiKey) {
+      console.log("[v0] YouTube API key not found in environment")
       return { success: false, error: "YouTube API key not configured" }
     }
 
     const url = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=snippet&key=${apiKey}`
+    console.log("[v0] Making request to YouTube API:", url.replace(apiKey, "***"))
+
     const response = await fetch(url)
+    console.log("[v0] YouTube API response status:", response.status)
 
     if (!response.ok) {
-      const errorData = (await response.json()) as { error?: { message?: string } }
+      const errorText = await response.text()
+      console.log("[v0] YouTube API error response:", errorText)
+
+      let errorData: { error?: { message?: string } } = {}
+      try {
+        errorData = JSON.parse(errorText)
+      } catch {
+        // If JSON parsing fails, use the raw text
+      }
+
       return {
         success: false,
-        error: errorData.error?.message || `YouTube API error: ${response.status}`,
+        error: errorData.error?.message || `YouTube API error: ${response.status} - ${errorText}`,
       }
     }
 
     const data = (await response.json()) as YouTubeVideoResponse
+    console.log("[v0] YouTube API response data:", JSON.stringify(data, null, 2))
 
     if (!data.items || data.items.length === 0) {
-      return { success: false, error: "Video not found or is not accessible" }
+      console.log("[v0] No video items found in response")
+      return {
+        success: false,
+        error: "Video not found or is not accessible. Please check if the video is public and the URL is correct.",
+      }
     }
 
     const video = data.items[0]
+    console.log("[v0] Successfully found video:", video.snippet.title)
+
     return {
       success: true,
       data: {
@@ -134,8 +156,11 @@ export async function fetchVideoInfoAction(
       },
     }
   } catch (error) {
-    console.error("Error fetching video info:", error)
-    return { success: false, error: "Failed to fetch video information" }
+    console.error("[v0] Error fetching video info:", error)
+    return {
+      success: false,
+      error: `Failed to fetch video information: ${error instanceof Error ? error.message : "Unknown error"}`,
+    }
   }
 }
 
